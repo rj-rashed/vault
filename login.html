@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html>
+<head><title>Vault Login</title><link rel="stylesheet" href="style.css"></head>
+<body>
+    <div class="container" style="text-align:center; margin-top:100px;">
+        <h2>🔐 Vault Login</h2>
+        <input type="password" id="pass" placeholder="পাসওয়ার্ড দিন"><br><br>
+        <button onclick="checkPass()">প্রবেশ করুন</button>
+    </div>
+    <script>
+        function checkPass() {
+            if(document.getElementById('pass').value === '1234') { // আপনার পছন্দমতো পাসওয়ার্ড
+                sessionStorage.setItem('isLoggedIn', 'true');
+                window.location.href = 'index.html';
+            } else { alert('ভুল পাসওয়ার্ড!'); }
+        }
+    </script>
+</body>
+</html>
