@@ -1,111 +1,112 @@
-!DOCTYPE html
-html lang=bn
-head
-    meta charset=UTF-8
-    meta name=viewport content=width=device-width, initial-scale=1.0
-    titleAdd Entry - Smart Ledger Cloudtitle
-    link rel=stylesheet href=style.css
-    link rel=stylesheet href=httpscdnjs.cloudflare.comajaxlibsfont-awesome6.0.0cssall.min.css
-head
-body
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vault - Ledger</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <a href="index.html" style="float: left; text-decoration: none;">⬅️ ফিরে যান</a>
+            <h2 style="text-align: center;">📝 আয়-ব্যয় লিপি</h2>
+        </header>
 
-    div class=sidebar
-        h2i class=fas fa-walleti Smart Ledgerh2
-        a href=index.htmli class=fas fa-homei ড্যাশবোর্ডa
-        a href=ledger.html class=activei class=fas fa-coinsi আয়-ব্যয় ইনপুটa
-        a href=debt.htmli class=fas fa-handshakei দেনা-পাওনাa
-        a href=accounts.htmli class=fas fa-keyi একাউন্টসa
-        a href=reports.htmli class=fas fa-file-alti রিপোর্টa
-    div
-
-    div class=main-content
-        div class=box
-            h3i class=fas fa-plus-circlei নতুন এন্ট্রি যোগ করুনh3
-            p style=color#94a3b8; margin-bottom 20px;আপনার তথ্য সরাসরি ক্লাউড ডাটাবেজে সংরক্ষিত হবে।p
+        <div class="form-group">
+            <label>বিবরণ:</label>
+            <input type="text" id="desc" placeholder="যেমন: বেতন, বাজার খরচ">
             
-            div class=form-group
-                labelবিবরণ (Description)label
-                input type=text id=l-desc placeholder=যেমন বাজারের খরচ, বেতন ইত্যাদি
-            div
+            <label>পরিমাণ (৳):</label>
+            <input type="number" id="amt" placeholder="0.00">
+            
+            <label>ধরণ:</label>
+            <select id="cat">
+                <option value="income">আয় (+)</option>
+                <option value="expense">ব্যয় (-)</option>
+            </select>
+            
+            <button onclick="saveData()" id="saveBtn">সেভ করুন</button>
+        </div>
 
-            div class=form-group
-                labelটাকার পরিমাণ (Amount)label
-                input type=number id=l-amt placeholder=৳ ০.০০
-            div
+        <hr>
+        <h3>সাম্প্রতিক এন্ট্রি</h3>
+        <div id="recentEntries">লোডিং...</div>
+    </div>
 
-            div class=form-group
-                labelক্যাটাগরিlabel
-                select id=l-cat
-                    option value=expenseব্যয় (Expense)option
-                    option value=incomeআয় (Income)option
-                select
-            div
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getDatabase, ref, push, set, onValue, limitToLast, query } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-            div class=form-group
-                labelতারিখlabel
-                input type=date id=l-date
-            div
-
-            button onclick=saveToCloud()i class=fas fa-cloud-upload-alti সেভ করুন (Cloud Sync)button
-        div
-    div
-
-    script type=module
-        import { initializeApp } from httpswww.gstatic.comfirebasejs10.7.1firebase-app.js;
-        import { getDatabase, ref, push, set } from httpswww.gstatic.comfirebasejs10.7.1firebase-database.js;
-
-         --- আপনার Firebase Config এখানে বসান ---
+        // আপনার সঠিক Firebase Config
         const firebaseConfig = {
-            apiKey YOUR_API_KEY,
-            authDomain YOUR_PROJECT_ID.firebaseapp.com,
-            databaseURL httpsYOUR_PROJECT_ID-default-rtdb.firebaseio.com,
-            projectId YOUR_PROJECT_ID,
-            storageBucket YOUR_PROJECT_ID.appspot.com,
-            messagingSenderId YOUR_SENDER_ID,
-            appId YOUR_APP_ID
+            apiKey: "AIzaSyB-6yH2CTfA4bBny99kOElCypisOAJqbeo",
+            authDomain: "rj-vault-14646.firebaseapp.com",
+            databaseURL: "https://rj-vault-14646-default-rtdb.firebaseio.com",
+            projectId: "rj-vault-14646",
+            storageBucket: "rj-vault-14646.firebasestorage.app",
+            messagingSenderId: "512342363505",
+            appId: "1:512342363505:web:db70675bf68e6197197ad0"
         };
 
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-         ডিফল্টভাবে আজকের তারিখ সেট করা
-        document.getElementById('l-date').valueAsDate = new Date();
+        // ডাটা সেভ করার ফাংশন
+        window.saveData = function() {
+            const desc = document.getElementById('desc').value;
+            const amt = parseFloat(document.getElementById('amt').value);
+            const cat = document.getElementById('cat').value;
+            const saveBtn = document.getElementById('saveBtn');
 
-         ডাটা সেভ করার ফাংশন
-        window.saveToCloud = function() {
-            const desc = document.getElementById('l-desc').value;
-            const amt = parseFloat(document.getElementById('l-amt').value);
-            const cat = document.getElementById('l-cat').value;
-            const date = document.getElementById('l-date').value;
+            if(desc && !isNaN(amt)) {
+                saveBtn.disabled = true;
+                saveBtn.innerText = "সেভ হচ্ছে...";
 
-            if (!desc  isNaN(amt)  !date) {
-                alert(দয়া করে সঠিক তথ্য দিয়ে ঘরগুলো পূরণ করুন।);
-                return;
-            }
-
-            const entryData = {
-                desc desc,
-                amt amt,
-                cat cat,
-                date date,
-                timestamp Date.now()
-            };
-
-             Firebase-এ ডেটা পাঠানো
-            const ledgerRef = ref(db, 'ledger_data');
-            const newEntryRef = push(ledgerRef);
-            
-            set(newEntryRef, entryData)
-                .then(() = {
-                     ফর্ম রিসেট করা
-                    document.getElementById('l-desc').value = ;
-                    document.getElementById('l-amt').value = ;
-                    alert(✅ তথ্যটি সফলভাবে ক্লাউডে সেভ হয়েছে!);
+                const listRef = ref(db, 'ledger_data');
+                const newEntryRef = push(listRef);
+                
+                set(newEntryRef, {
+                    desc: desc,
+                    amt: amt,
+                    cat: cat,
+                    date: new Date().toLocaleString('bn-BD')
                 })
-                .catch((error) = {
-                    alert(❌ এরর  + error.message);
+                .then(() => {
+                    alert("সফলভাবে সেভ হয়েছে!");
+                    document.getElementById('desc').value = '';
+                    document.getElementById('amt').value = '';
+                    saveBtn.disabled = false;
+                    saveBtn.innerText = "সেভ করুন";
+                })
+                .catch((error) => {
+                    alert("ভুল হয়েছে: " + error.message);
+                    saveBtn.disabled = false;
                 });
+            } else {
+                alert("দয়া করে সঠিক তথ্য দিন।");
+            }
         }
-    script
-body
-html
+
+        // সাম্প্রতিক ৫টি এন্ট্রি দেখানো
+        const recentRef = query(ref(db, 'ledger_data'), limitToLast(5));
+        onValue(recentRef, (snapshot) => {
+            const data = snapshot.val();
+            const display = document.getElementById('recentEntries');
+            display.innerHTML = '';
+            
+            if (data) {
+                Object.values(data).reverse().forEach(item => {
+                    const color = item.cat === 'income' ? 'green' : 'red';
+                    display.innerHTML += `<p style="border-bottom:1px solid #ddd; padding:5px;">
+                        <strong>${item.desc}</strong>: <span style="color:${color}">৳${item.amt}</span> <br>
+                        <small>${item.date}</small>
+                    </p>`;
+                });
+            } else {
+                display.innerHTML = 'কোনো ডাটা নেই।';
+            }
+        });
+    </script>
+</body>
+</html>
