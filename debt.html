@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debt & Loan - Smart Ledger Cloud</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .mode-selector { display: flex; gap: 10px; margin-bottom: 20px; }
+        .mode-btn { flex: 1; padding: 12px; text-align: center; background: rgba(255,255,255,0.05); cursor: pointer; border-radius: 8px; transition: 0.3s; border: 1px solid rgba(255,255,255,0.1); }
+        .mode-btn.active { background: var(--primary); color: black; font-weight: bold; border-color: var(--primary); }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <h2><i class="fas fa-wallet"></i> Smart Ledger</h2>
+        <a href="index.html"><i class="fas fa-home"></i> ড্যাশবোর্ড</a>
+        <a href="ledger.html"><i class="fas fa-coins"></i> আয়-ব্যয় ইনপুট</a>
+        <a href="debt.html" class="active"><i class="fas fa-handshake"></i> দেনা-পাওনা</a>
+        <a href="accounts.html"><i class="fas fa-key"></i> একাউন্টস</a>
+        <a href="reports.html"><i class="fas fa-file-alt"></i> রিপোর্ট</a>
+    </div>
+
+    <div class="main-content">
+        <div class="box">
+            <h3><i class="fas fa-handshake"></i> দেনা-পাওনা ম্যানেজমেন্ট</h3>
+            <p style="color:#94a3b8; margin-bottom: 20px;">ধারের হিসাব রাখুন এবং ক্লাউডে সিঙ্ক করুন।</p>
+
+            <div class="mode-selector">
+                <div class="mode-btn active" id="btn-give" onclick="setMode('give')">ধারে দিয়েছি</div>
+                <div class="mode-btn" id="btn-take" onclick="setMode('take')">ধার নিয়েছি</div>
+            </div>
+            
+            <div class="form-group">
+                <label>ব্যক্তির নাম:</label>
+                <input type="text" id="d-name" placeholder="নাম লিখুন">
+            </div>
+
+            <div class="form-group">
+                <label>টাকার পরিমাণ:</label>
+                <input type="number" id="d-amt" placeholder="৳ ০.০০">
+            </div>
+
+            <button onclick="saveDebtToCloud()"><i class="fas fa-cloud-upload-alt"></i> এন্ট্রি সেভ করুন</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getDatabase, ref, push, set } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+        // --- আপনার Firebase Config এখানে বসান ---
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+            databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_PROJECT_ID.appspot.com",
+            messagingSenderId: "YOUR_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        let currentMode = 'give';
+
+        window.setMode = function(mode) {
+            currentMode = mode;
+            document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(`btn-${mode}`).classList.add('active');
+        }
+
+        window.saveDebtToCloud = function() {
+            const name = document.getElementById('d-name').value;
+            const amt = parseFloat(document.getElementById('d-amt').value);
+
+            if (!name || isNaN(amt)) {
+                alert("দয়া করে নাম এবং টাকার পরিমাণ সঠিক দিন।");
+                return;
+            }
+
+            const debtData = {
+                name: name,
+                amt: amt,
+                type: currentMode,
+                date: new Date().toLocaleDateString(),
+                timestamp: Date.now()
+            };
+
+            const debtRef = ref(db, 'debts');
+            const newDebtRef = push(debtRef);
+            
+            set(newDebtRef, debtData)
+                .then(() => {
+                    document.getElementById('d-name').value = "";
+                    document.getElementById('d-amt').value = "";
+                    alert(`✅ ${currentMode === 'give' ? 'পাওনা' : 'দেনা'} হিসেবে ক্লাউডে সেভ হয়েছে!`);
+                })
+                .catch((e) => alert("ভুল হয়েছে: " + e.message));
+        }
+    </script>
+</body>
+</html>

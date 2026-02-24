@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Accounts - Smart Ledger Cloud</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+
+    <div class="sidebar">
+        <h2><i class="fas fa-wallet"></i> Smart Ledger</h2>
+        <a href="index.html"><i class="fas fa-home"></i> ড্যাশবোর্ড</a>
+        <a href="ledger.html"><i class="fas fa-coins"></i> আয়-ব্যয় ইনপুট</a>
+        <a href="debt.html"><i class="fas fa-handshake"></i> দেনা-পাওনা</a>
+        <a href="accounts.html" class="active"><i class="fas fa-key"></i> একাউন্টস</a>
+        <a href="reports.html"><i class="fas fa-file-alt"></i> রিপোর্ট</a>
+    </div>
+
+    <div class="main-content">
+        <div class="box">
+            <h3><i class="fas fa-shield-alt"></i> একাউন্ট ভল্ট (Secure Cloud)</h3>
+            <p style="color:#94a3b8; margin-bottom: 20px;">আপনার বিভিন্ন একাউন্টের পাসওয়ার্ড নিরাপদে ক্লাউডে রাখুন।</p>
+            
+            <div class="form-group">
+                <label>ক্যাটাগরি (যেমন: Gmail, Facebook, Bank):</label>
+                <input type="text" id="a-cat" placeholder="ক্যাটাগরি লিখুন">
+            </div>
+
+            <div class="form-group">
+                <label>টাইটেল/নাম:</label>
+                <input type="text" id="a-title" placeholder="যেমন: My Primary Gmail">
+            </div>
+
+            <div class="form-group">
+                <label>ইউজারনেম/ইমেইল:</label>
+                <input type="text" id="a-user" placeholder="example@mail.com">
+            </div>
+
+            <div class="form-group">
+                <label>পাসওয়ার্ড:</label>
+                <input type="password" id="a-pass" placeholder="পাসওয়ার্ড লিখুন">
+            </div>
+
+            <button onclick="saveAccountToCloud()"><i class="fas fa-lock"></i> একাউন্ট সেভ করুন</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getDatabase, ref, push, set } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+        // --- আপনার Firebase Config এখানে বসান ---
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+            databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_PROJECT_ID.appspot.com",
+            messagingSenderId: "YOUR_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        window.saveAccountToCloud = function() {
+            const cat = document.getElementById('a-cat').value;
+            const title = document.getElementById('a-title').value;
+            const user = document.getElementById('a-user').value;
+            const pass = document.getElementById('a-pass').value;
+
+            if (!title || !user || !pass) {
+                alert("দয়া করে প্রয়োজনীয় ঘরগুলো পূরণ করুন।");
+                return;
+            }
+
+            const accData = {
+                cat: cat || "General",
+                title: title,
+                user: user,
+                pass: pass,
+                timestamp: Date.now()
+            };
+
+            const accRef = ref(db, 'accounts');
+            const newAccRef = push(accRef);
+            
+            set(newAccRef, accData)
+                .then(() => {
+                    document.getElementById('a-cat').value = "";
+                    document.getElementById('a-title').value = "";
+                    document.getElementById('a-user').value = "";
+                    document.getElementById('a-pass').value = "";
+                    alert("✅ একাউন্ট তথ্য ক্লাউড ভল্টে সেভ হয়েছে!");
+                })
+                .catch((e) => alert("Error: " + e.message));
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control Center - Smart Ledger Cloud</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .report-section { margin-bottom: 40px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 15px; background: rgba(255,255,255,0.02); border-radius: 10px; overflow: hidden; }
+        th, td { padding: 15px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        th { background: rgba(255,255,255,0.05); color: var(--primary); }
+        .btn-del { color: var(--expense); cursor: pointer; background: none; border: none; font-size: 16px; }
+        .btn-del:hover { color: #ff6b6b; }
+        .badge { padding: 4px 8px; border-radius: 4px; font-size: 12px; }
+        .badge-income { background: rgba(16, 185, 129, 0.2); color: #10b981; }
+        .badge-expense { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <h2><i class="fas fa-wallet"></i> Smart Ledger</h2>
+        <a href="index.html"><i class="fas fa-home"></i> ড্যাশবোর্ড</a>
+        <a href="ledger.html"><i class="fas fa-coins"></i> আয়-ব্যয়</a>
+        <a href="debt.html"><i class="fas fa-handshake"></i> দেনা-পাওনা</a>
+        <a href="accounts.html"><i class="fas fa-key"></i> একাউন্টস</a>
+        <a href="reports.html" class="active"><i class="fas fa-file-alt"></i> রিপোর্ট</a>
+    </div>
+
+    <div class="main-content">
+        <div class="header">
+            <h1><i class="fas fa-database"></i> কন্ট্রোল সেন্টার</h1>
+            <p>ক্লাউড ডাটাবেজ থেকে রিয়েল-টাইম তথ্য দেখানো হচ্ছে</p>
+        </div>
+
+        <div class="report-section box">
+            <h3><i class="fas fa-list"></i> আয়-ব্যয় রেকর্ডস</h3>
+            <table>
+                <thead>
+                    <tr><th>বিবরণ</th><th>পরিমাণ</th><th>ক্যাটাগরি</th><th>অ্যাকশন</th></tr>
+                </thead>
+                <tbody id="ledger-table"></tbody>
+            </table>
+        </div>
+
+        <div class="report-section box">
+            <h3><i class="fas fa-handshake"></i> দেনা-পাওনা রেকর্ডস</h3>
+            <table>
+                <thead>
+                    <tr><th>নাম</th><th>পরিমাণ</th><th>ধরণ</th><th>অ্যাকশন</th></tr>
+                </thead>
+                <tbody id="debt-table"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getDatabase, ref, onValue, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+            databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_PROJECT_ID.appspot.com",
+            messagingSenderId: "YOUR_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        // ১. আয়-ব্যয় ডাটা লোড করা
+        onValue(ref(db, 'ledger_data'), (snapshot) => {
+            const data = snapshot.val();
+            let html = "";
+            if(data) {
+                Object.keys(data).forEach(key => {
+                    const item = data[key];
+                    html += `<tr>
+                        <td>${item.desc}</td>
+                        <td style="color:${item.cat === 'income' ? '#10b981' : '#ef4444'}">৳${item.amt}</td>
+                        <td><span class="badge ${item.cat === 'income' ? 'badge-income' : 'badge-expense'}">${item.cat.toUpperCase()}</span></td>
+                        <td><button class="btn-del" onclick="deleteItem('ledger_data/${key}')"><i class="fas fa-trash"></i></button></td>
+                    </tr>`;
+                });
+            }
+            document.getElementById('ledger-table').innerHTML = html || "<tr><td colspan='4'>কোনো তথ্য নেই।</td></tr>";
+        });
+
+        // ২. দেনা-পাওনা ডাটা লোড করা
+        onValue(ref(db, 'debts'), (snapshot) => {
+            const data = snapshot.val();
+            let html = "";
+            if(data) {
+                Object.keys(data).forEach(key => {
+                    const item = data[key];
+                    html += `<tr>
+                        <td>${item.name}</td>
+                        <td>৳${item.amt}</td>
+                        <td>${item.type === 'give' ? 'পাওনা' : 'দেনা'}</td>
+                        <td><button class="btn-del" onclick="deleteItem('debts/${key}')"><i class="fas fa-trash"></i></button></td>
+                    </tr>`;
+                });
+            }
+            document.getElementById('debt-table').innerHTML = html || "<tr><td colspan='4'>কোনো তথ্য নেই।</td></tr>";
+        });
+
+        // ডাটা ডিলিট ফাংশন
+        window.deleteItem = function(path) {
+            if(confirm("আপনি কি নিশ্চিতভাবে এটি মুছে ফেলতে চান?")) {
+                remove(ref(db, path)).then(() => alert("মুছে ফেলা হয়েছে!"));
+            }
+        }
+    </script>
+</body>
+</html>

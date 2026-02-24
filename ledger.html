@@ -1,0 +1,111 @@
+!DOCTYPE html
+html lang=bn
+head
+    meta charset=UTF-8
+    meta name=viewport content=width=device-width, initial-scale=1.0
+    titleAdd Entry - Smart Ledger Cloudtitle
+    link rel=stylesheet href=style.css
+    link rel=stylesheet href=httpscdnjs.cloudflare.comajaxlibsfont-awesome6.0.0cssall.min.css
+head
+body
+
+    div class=sidebar
+        h2i class=fas fa-walleti Smart Ledgerh2
+        a href=index.htmli class=fas fa-homei ড্যাশবোর্ডa
+        a href=ledger.html class=activei class=fas fa-coinsi আয়-ব্যয় ইনপুটa
+        a href=debt.htmli class=fas fa-handshakei দেনা-পাওনাa
+        a href=accounts.htmli class=fas fa-keyi একাউন্টসa
+        a href=reports.htmli class=fas fa-file-alti রিপোর্টa
+    div
+
+    div class=main-content
+        div class=box
+            h3i class=fas fa-plus-circlei নতুন এন্ট্রি যোগ করুনh3
+            p style=color#94a3b8; margin-bottom 20px;আপনার তথ্য সরাসরি ক্লাউড ডাটাবেজে সংরক্ষিত হবে।p
+            
+            div class=form-group
+                labelবিবরণ (Description)label
+                input type=text id=l-desc placeholder=যেমন বাজারের খরচ, বেতন ইত্যাদি
+            div
+
+            div class=form-group
+                labelটাকার পরিমাণ (Amount)label
+                input type=number id=l-amt placeholder=৳ ০.০০
+            div
+
+            div class=form-group
+                labelক্যাটাগরিlabel
+                select id=l-cat
+                    option value=expenseব্যয় (Expense)option
+                    option value=incomeআয় (Income)option
+                select
+            div
+
+            div class=form-group
+                labelতারিখlabel
+                input type=date id=l-date
+            div
+
+            button onclick=saveToCloud()i class=fas fa-cloud-upload-alti সেভ করুন (Cloud Sync)button
+        div
+    div
+
+    script type=module
+        import { initializeApp } from httpswww.gstatic.comfirebasejs10.7.1firebase-app.js;
+        import { getDatabase, ref, push, set } from httpswww.gstatic.comfirebasejs10.7.1firebase-database.js;
+
+         --- আপনার Firebase Config এখানে বসান ---
+        const firebaseConfig = {
+            apiKey YOUR_API_KEY,
+            authDomain YOUR_PROJECT_ID.firebaseapp.com,
+            databaseURL httpsYOUR_PROJECT_ID-default-rtdb.firebaseio.com,
+            projectId YOUR_PROJECT_ID,
+            storageBucket YOUR_PROJECT_ID.appspot.com,
+            messagingSenderId YOUR_SENDER_ID,
+            appId YOUR_APP_ID
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+         ডিফল্টভাবে আজকের তারিখ সেট করা
+        document.getElementById('l-date').valueAsDate = new Date();
+
+         ডাটা সেভ করার ফাংশন
+        window.saveToCloud = function() {
+            const desc = document.getElementById('l-desc').value;
+            const amt = parseFloat(document.getElementById('l-amt').value);
+            const cat = document.getElementById('l-cat').value;
+            const date = document.getElementById('l-date').value;
+
+            if (!desc  isNaN(amt)  !date) {
+                alert(দয়া করে সঠিক তথ্য দিয়ে ঘরগুলো পূরণ করুন।);
+                return;
+            }
+
+            const entryData = {
+                desc desc,
+                amt amt,
+                cat cat,
+                date date,
+                timestamp Date.now()
+            };
+
+             Firebase-এ ডেটা পাঠানো
+            const ledgerRef = ref(db, 'ledger_data');
+            const newEntryRef = push(ledgerRef);
+            
+            set(newEntryRef, entryData)
+                .then(() = {
+                     ফর্ম রিসেট করা
+                    document.getElementById('l-desc').value = ;
+                    document.getElementById('l-amt').value = ;
+                    alert(✅ তথ্যটি সফলভাবে ক্লাউডে সেভ হয়েছে!);
+                })
+                .catch((error) = {
+                    alert(❌ এরর  + error.message);
+                });
+        }
+    script
+body
+html
