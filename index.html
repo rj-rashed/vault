@@ -1,30 +1,94 @@
-<script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vault - Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🔒 Vault Dashboard</h1>
+            <p>আপনার হিসাবের সারসংক্ষেপ</p>
+        </header>
 
-    const firebaseConfig = {
-        apiKey: "AIzaSyB-6yH2CTfA4bBny99kOElCypisOAJqbeo",
-        authDomain: "rj-vault-14646.firebaseapp.com",
-        databaseURL: "https://rj-vault-14646-default-rtdb.firebaseio.com",
-        projectId: "rj-vault-14646",
-        storageBucket: "rj-vault-14646.firebasestorage.app",
-        messagingSenderId: "512342363505",
-        appId: "1:512342363505:web:db70675bf68e6197197ad0"
-    };
+        <div class="summary-cards" style="display: flex; gap: 10px; margin: 20px 0;">
+            <div class="card income" style="flex: 1; padding: 20px; background: #28a745; color: white; border-radius: 10px; text-align: center;">
+                <h3>মোট আয়</h3>
+                <p>৳ <span id="totalIncome">0</span></p>
+            </div>
+            <div class="card expense" style="flex: 1; padding: 20px; background: #dc3545; color: white; border-radius: 10px; text-align: center;">
+                <h3>মোট ব্যয়</h3>
+                <p>৳ <span id="totalExpense">0</span></p>
+            </div>
+            <div class="card balance" style="flex: 1; padding: 20px; background: #007bff; color: white; border-radius: 10px; text-align: center;">
+                <h3>অবশিষ্ট</h3>
+                <p>৳ <span id="totalBalance">0</span></p>
+            </div>
+        </div>
 
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
+        <nav style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+            <a href="ledger.html" style="padding: 15px; background: #333; color: white; text-decoration: none; text-align: center; border-radius: 5px;">📝 আয়-ব্যয়</a>
+            <a href="debt.html" style="padding: 15px; background: #333; color: white; text-decoration: none; text-align: center; border-radius: 5px;">💸 দেনা-পাওনা</a>
+            <a href="accounts.html" style="padding: 15px; background: #333; color: white; text-decoration: none; text-align: center; border-radius: 5px;">🏦 একাউন্টস</a>
+            <a href="reports.html" style="padding: 15px; background: #333; color: white; text-decoration: none; text-align: center; border-radius: 5px;">📊 রিপোর্ট</a>
+        </nav>
 
-    if (sessionStorage.getItem('isLoggedIn') !== 'true') { window.location.href = 'login.html'; }
+        <button onclick="logout()" style="width: 100%; margin-top: 20px; padding: 10px; cursor: pointer;">লগ আউট</button>
+    </div>
 
-    onValue(ref(db, 'ledger_data'), (snapshot) => {
-        let inc = 0, exp = 0;
-        const data = snapshot.val();
-        if (data) {
-            Object.values(data).forEach(i => { if(i.cat === 'income') inc += i.amt; else exp += i.amt; });
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+        // আপনার সঠিক ফায়ারবেস কনফিগ
+        const firebaseConfig = {
+            apiKey: "AIzaSyB-6yH2CTfA4bBny99kOElCypisOAJqbeo",
+            authDomain: "rj-vault-14646.firebaseapp.com",
+            databaseURL: "https://rj-vault-14646-default-rtdb.firebaseio.com",
+            projectId: "rj-vault-14646",
+            storageBucket: "rj-vault-14646.firebasestorage.app",
+            messagingSenderId: "512342363505",
+            appId: "1:512342363505:web:db70675bf68e6197197ad0"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        // লগইন চেক (Security)
+        if (sessionStorage.getItem('isLoggedIn') !== 'true') {
+            window.location.href = 'login.html';
         }
-        document.getElementById('totalIncome').innerText = inc;
-        document.getElementById('totalExpense').innerText = exp;
-        document.getElementById('totalBalance').innerText = inc - exp;
-    });
-</script>
+
+        // রিয়েল-টাইম ডাটা রিড করা
+        const ledgerRef = ref(db, 'ledger_data');
+        onValue(ledgerRef, (snapshot) => {
+            let income = 0;
+            let expense = 0;
+            const data = snapshot.val();
+            
+            if (data) {
+                Object.values(data).forEach(item => {
+                    const amount = parseFloat(item.amt || 0);
+                    if (item.cat === 'income') {
+                        income += amount;
+                    } else {
+                        expense += amount;
+                    }
+                });
+            }
+
+            document.getElementById('totalIncome').innerText = income.toLocaleString();
+            document.getElementById('totalExpense').innerText = expense.toLocaleString();
+            document.getElementById('totalBalance').innerText = (income - expense).toLocaleString();
+        });
+
+        // লগ আউট ফাংশন
+        window.logout = function() {
+            sessionStorage.clear();
+            window.location.href = 'login.html';
+        }
+    </script>
+</body>
+</html>
