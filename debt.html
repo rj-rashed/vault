@@ -1,105 +1,118 @@
 <!DOCTYPE html>
-<html lang="bn">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Debt & Loan - Smart Ledger Cloud</title>
+    <title>Vault - Debt & Credit</title>
     <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <style>
-        .mode-selector { display: flex; gap: 10px; margin-bottom: 20px; }
-        .mode-btn { flex: 1; padding: 12px; text-align: center; background: rgba(255,255,255,0.05); cursor: pointer; border-radius: 8px; transition: 0.3s; border: 1px solid rgba(255,255,255,0.1); }
-        .mode-btn.active { background: var(--primary); color: black; font-weight: bold; border-color: var(--primary); }
-    </style>
 </head>
 <body>
+    <div class="container">
+        <header>
+            <a href="index.html" style="float: left; text-decoration: none;">⬅️ ফিরে যান</a>
+            <h2 style="text-align: center;">💸 দেনা-পাওনা</h2>
+        </header>
 
-    <div class="sidebar">
-        <h2><i class="fas fa-wallet"></i> Smart Ledger</h2>
-        <a href="index.html"><i class="fas fa-home"></i> ড্যাশবোর্ড</a>
-        <a href="ledger.html"><i class="fas fa-coins"></i> আয়-ব্যয় ইনপুট</a>
-        <a href="debt.html" class="active"><i class="fas fa-handshake"></i> দেনা-পাওনা</a>
-        <a href="accounts.html"><i class="fas fa-key"></i> একাউন্টস</a>
-        <a href="reports.html"><i class="fas fa-file-alt"></i> রিপোর্ট</a>
-    </div>
-
-    <div class="main-content">
-        <div class="box">
-            <h3><i class="fas fa-handshake"></i> দেনা-পাওনা ম্যানেজমেন্ট</h3>
-            <p style="color:#94a3b8; margin-bottom: 20px;">ধারের হিসাব রাখুন এবং ক্লাউডে সিঙ্ক করুন।</p>
-
-            <div class="mode-selector">
-                <div class="mode-btn active" id="btn-give" onclick="setMode('give')">ধারে দিয়েছি</div>
-                <div class="mode-btn" id="btn-take" onclick="setMode('take')">ধার নিয়েছি</div>
-            </div>
+        <div class="form-group">
+            <label>ব্যক্তির নাম:</label>
+            <input type="text" id="personName" placeholder="যেমন: রহিম সাহেব">
             
-            <div class="form-group">
-                <label>ব্যক্তির নাম:</label>
-                <input type="text" id="d-name" placeholder="নাম লিখুন">
-            </div>
-
-            <div class="form-group">
-                <label>টাকার পরিমাণ:</label>
-                <input type="number" id="d-amt" placeholder="৳ ০.০০">
-            </div>
-
-            <button onclick="saveDebtToCloud()"><i class="fas fa-cloud-upload-alt"></i> এন্ট্রি সেভ করুন</button>
+            <label>পরিমাণ (৳):</label>
+            <input type="number" id="debtAmt" placeholder="0.00">
+            
+            <label>ধরণ:</label>
+            <select id="debtType">
+                <option value="get">আমি পাব (পাওনা)</option>
+                <option value="give">সে পাবে (দেনা)</option>
+            </select>
+            
+            <button onclick="saveDebt()" id="debtBtn">সেভ করুন</button>
         </div>
+
+        <hr>
+        <h3>দেনা-পাওনার তালিকা</h3>
+        <div id="debtList">লোডিং...</div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getDatabase, ref, push, set } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+        import { getDatabase, ref, push, set, onValue, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-        // --- আপনার Firebase Config এখানে বসান ---
+        // আপনার সঠিক Firebase Config
         const firebaseConfig = {
-            apiKey: "YOUR_API_KEY",
-            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-            databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
-            projectId: "YOUR_PROJECT_ID",
-            storageBucket: "YOUR_PROJECT_ID.appspot.com",
-            messagingSenderId: "YOUR_SENDER_ID",
-            appId: "YOUR_APP_ID"
+            apiKey: "AIzaSyB-6yH2CTfA4bBny99kOElCypisOAJqbeo",
+            authDomain: "rj-vault-14646.firebaseapp.com",
+            databaseURL: "https://rj-vault-14646-default-rtdb.firebaseio.com",
+            projectId: "rj-vault-14646",
+            storageBucket: "rj-vault-14646.firebasestorage.app",
+            messagingSenderId: "512342363505",
+            appId: "1:512342363505:web:db70675bf68e6197197ad0"
         };
 
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        let currentMode = 'give';
+        // ডাটা সেভ করার ফাংশন
+        window.saveDebt = function() {
+            const name = document.getElementById('personName').value;
+            const amt = parseFloat(document.getElementById('debtAmt').value);
+            const type = document.getElementById('debtType').value;
+            const btn = document.getElementById('debtBtn');
 
-        window.setMode = function(mode) {
-            currentMode = mode;
-            document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
-            document.getElementById(`btn-${mode}`).classList.add('active');
+            if(name && !isNaN(amt)) {
+                btn.disabled = true;
+                const debtRef = ref(db, 'debt_data');
+                const newDebtRef = push(debtRef);
+                
+                set(newDebtRef, {
+                    name: name,
+                    amt: amt,
+                    type: type,
+                    date: new Date().toLocaleDateString('bn-BD')
+                })
+                .then(() => {
+                    alert("হিসাব রাখা হয়েছে!");
+                    document.getElementById('personName').value = '';
+                    document.getElementById('debtAmt').value = '';
+                    btn.disabled = false;
+                })
+                .catch((e) => alert("Error: " + e.message));
+            } else {
+                alert("সব তথ্য সঠিকভাবে দিন।");
+            }
         }
 
-        window.saveDebtToCloud = function() {
-            const name = document.getElementById('d-name').value;
-            const amt = parseFloat(document.getElementById('d-amt').value);
-
-            if (!name || isNaN(amt)) {
-                alert("দয়া করে নাম এবং টাকার পরিমাণ সঠিক দিন।");
-                return;
-            }
-
-            const debtData = {
-                name: name,
-                amt: amt,
-                type: currentMode,
-                date: new Date().toLocaleDateString(),
-                timestamp: Date.now()
-            };
-
-            const debtRef = ref(db, 'debts');
-            const newDebtRef = push(debtRef);
+        // ডাটা দেখানোর ফাংশন
+        const debtRef = ref(db, 'debt_data');
+        onValue(debtRef, (snapshot) => {
+            const data = snapshot.val();
+            const display = document.getElementById('debtList');
+            display.innerHTML = '';
             
-            set(newDebtRef, debtData)
-                .then(() => {
-                    document.getElementById('d-name').value = "";
-                    document.getElementById('d-amt').value = "";
-                    alert(`✅ ${currentMode === 'give' ? 'পাওনা' : 'দেনা'} হিসেবে ক্লাউডে সেভ হয়েছে!`);
-                })
-                .catch((e) => alert("ভুল হয়েছে: " + e.message));
+            if (data) {
+                Object.keys(data).forEach(key => {
+                    const item = data[key];
+                    const color = item.type === 'get' ? '#28a745' : '#dc3545';
+                    const text = item.type === 'get' ? 'আমি পাব' : 'আমি দেব';
+                    
+                    display.innerHTML += `
+                        <div style="border: 1px solid #ddd; padding: 10px; margin-bottom: 5px; border-radius: 5px; position: relative;">
+                            <strong>${item.name}</strong> <br>
+                            <span style="color:${color}">${text}: ৳${item.amt}</span> <br>
+                            <small>${item.date}</small>
+                            <button onclick="deleteDebt('${key}')" style="position:absolute; right:10px; top:10px; background:none; border:none; color:red; cursor:pointer;">❌</button>
+                        </div>`;
+                });
+            } else {
+                display.innerHTML = 'কোনো দেনা-পাওনা নেই।';
+            }
+        });
+
+        // ডিলিট করার ফাংশন
+        window.deleteDebt = function(key) {
+            if(confirm("এই হিসাবটি কি মুছে ফেলতে চান?")) {
+                remove(ref(db, 'debt_data/' + key));
+            }
         }
     </script>
 </body>
