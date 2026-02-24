@@ -1,106 +1,101 @@
 <!DOCTYPE html>
-<html lang="bn">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Dashboard - Smart Ledger Cloud</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vault - Dashboard</title>
     <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        /* দ্রুত লোডিংয়ের জন্য কিছু বেসিক স্টাইল */
+        .summary-cards { display: flex; gap: 10px; margin: 20px 0; }
+        .card { flex: 1; padding: 20px; border-radius: 10px; text-align: center; color: white; }
+        .income { background: #28a745; }
+        .expense { background: #dc3545; }
+        .balance { background: #007bff; }
+        .nav-btn { display: block; width: 100%; padding: 15px; margin: 10px 0; text-align: center; background: #333; color: white; text-decoration: none; border-radius: 5px; }
+    </style>
 </head>
 <body>
+    <div class="container">
+        <header>
+            <h1>🔒 Vault Dashboard</h1>
+        </header>
 
-    <div class="sidebar">
-        <h2><i class="fas fa-wallet"></i> Smart Ledger</h2>
-        <a href="index.html" class="active"><i class="fas fa-home"></i> ড্যাশবোর্ড</a>
-        <a href="ledger.html"><i class="fas fa-coins"></i> আয়-ব্যয়</a>
-        <a href="debt.html"><i class="fas fa-handshake"></i> দেনা-পাওনা</a>
-        <a href="accounts.html"><i class="fas fa-key"></i> একাউন্টস</a>
-        <a href="reports.html"><i class="fas fa-file-alt"></i> রিপোর্ট</a>
-    </div>
-
-    <div class="main-content">
-        <div class="header">
-            <h1>স্বাগতম, ইউজার!</h1>
-            <p>আপনার বর্তমান আর্থিক অবস্থা (Cloud Sync ON)</p>
-        </div>
-
-        <div class="stats-grid">
-            <div class="stat-card">
-                <h3>মোট ব্যালেন্স</h3>
-                <div class="value" id="total-balance">৳০</div>
-            </div>
-            <div class="stat-card">
+        <div class="summary-cards">
+            <div class="card income">
                 <h3>মোট আয়</h3>
-                <div class="value" style="color:var(--income);" id="income-view">৳০</div>
+                <p>৳ <span id="totalIncome">0</span></p>
             </div>
-            <div class="stat-card">
+            <div class="card expense">
                 <h3>মোট ব্যয়</h3>
-                <div class="value" style="color:var(--expense);" id="expense-view">৳০</div>
+                <p>৳ <span id="totalExpense">0</span></p>
+            </div>
+            <div class="card balance">
+                <h3>অবশিষ্ট</h3>
+                <p>৳ <span id="totalBalance">0</span></p>
             </div>
         </div>
 
-        <div class="box" style="margin-top: 20px; text-align: center;">
-            <h3><i class="fas fa-stopwatch"></i> ফোকাস টাইমার</h3>
-            <div id="timer-view" style="font-size: 40px; margin: 10px 0;">00:00</div>
-            <input type="number" id="timer-input" placeholder="মিনিট লিখুন" style="width: 100px; text-align: center;">
-            <br><br>
-            <button onclick="startTimer()" style="background:var(--income); width: 100px;">শুরু</button>
-            <button onclick="resetTimer()" style="background:var(--expense); width: 100px;">রিসেট</button>
-        </div>
+        <nav>
+            <a href="ledger.html" class="nav-btn">📝 আয়-ব্যয় লিপি</a>
+            <a href="debt.html" class="nav-btn">💸 দেনা-পাওনা</a>
+            <a href="accounts.html" class="nav-btn">🏦 একাউন্টস</a>
+            <a href="reports.html" class="nav-btn">📊 বিস্তারিত রিপোর্ট</a>
+        </nav>
+
+        <button onclick="logout()" style="margin-top:20px; width:100%; cursor:pointer;">লগ আউট</button>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
         import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-        // --- আপনার Firebase Config এখানে বসান ---
+        // আপনার সঠিক Firebase Config (image_8b053b.png থেকে সংগৃহীত)
         const firebaseConfig = {
-            apiKey: "YOUR_API_KEY",
-            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-            databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
-            projectId: "YOUR_PROJECT_ID",
-            storageBucket: "YOUR_PROJECT_ID.appspot.com",
-            messagingSenderId: "YOUR_SENDER_ID",
-            appId: "YOUR_APP_ID"
+            apiKey: "AIzaSyB-6yH2CTfA4bBny99kOElCypisOAJqbeo",
+            authDomain: "rj-vault-14646.firebaseapp.com",
+            databaseURL: "https://rj-vault-14646-default-rtdb.firebaseio.com",
+            projectId: "rj-vault-14646",
+            storageBucket: "rj-vault-14646.firebasestorage.app",
+            messagingSenderId: "512342363505",
+            appId: "1:512342363505:web:db70675bf68e6197197ad0"
         };
 
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        // রিয়েল-টাইম ড্যাশবোর্ড আপডেট
+        // লগইন গার্ড (sessionStorage)
+        if (sessionStorage.getItem('isLoggedIn') !== 'true') {
+            window.location.href = 'login.html';
+        }
+
+        // ডাটাবেজ থেকে রিয়েল-টাইম ক্যালকুলেশন
         const ledgerRef = ref(db, 'ledger_data');
         onValue(ledgerRef, (snapshot) => {
-            let totalIn = 0;
-            let totalEx = 0;
+            let income = 0;
+            let expense = 0;
             const data = snapshot.val();
             
             if (data) {
                 Object.values(data).forEach(item => {
-                    if (item.cat === 'income') totalIn += parseFloat(item.amt);
-                    else totalEx += parseFloat(item.amt);
+                    let amount = parseFloat(item.amt || 0);
+                    if (item.cat === 'income') {
+                        income += amount;
+                    } else {
+                        expense += amount;
+                    }
                 });
             }
 
-            document.getElementById('income-view').innerText = `৳${totalIn}`;
-            document.getElementById('expense-view').innerText = `৳${totalEx}`;
-            document.getElementById('total-balance').innerText = `৳${totalIn - totalEx}`;
+            document.getElementById('totalIncome').innerText = income;
+            document.getElementById('totalExpense').innerText = expense;
+            document.getElementById('totalBalance').innerText = (income - expense);
         });
 
-        // টাইমার লজিক (লোকাল থাকবে)
-        let timerInterval;
-        window.startTimer = function() {
-            let mins = document.getElementById('timer-input').value;
-            if(!mins) return;
-            let seconds = mins * 60;
-            clearInterval(timerInterval);
-            timerInterval = setInterval(() => {
-                let m = Math.floor(seconds / 60);
-                let s = seconds % 60;
-                document.getElementById('timer-view').innerText = `${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
-                if(seconds <= 0) { clearInterval(timerInterval); alert("সময় শেষ!"); }
-                seconds--;
-            }, 1000);
+        window.logout = function() {
+            sessionStorage.clear();
+            window.location.href = 'login.html';
         }
-        window.resetTimer = function() { clearInterval(timerInterval); document.getElementById('timer-view').innerText = "00:00"; }
     </script>
 </body>
 </html>
