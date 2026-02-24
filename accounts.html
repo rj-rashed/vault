@@ -1,101 +1,107 @@
 <!DOCTYPE html>
-<html lang="bn">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Manage Accounts - Smart Ledger Cloud</title>
+    <title>Vault - Accounts</title>
     <link rel="stylesheet" href="style.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
+    <div class="container">
+        <header>
+            <a href="index.html" style="float: left; text-decoration: none;">⬅️ ফিরে যান</a>
+            <h2 style="text-align: center;">🏦 একাউন্টস ভল্ট</h2>
+        </header>
 
-    <div class="sidebar">
-        <h2><i class="fas fa-wallet"></i> Smart Ledger</h2>
-        <a href="index.html"><i class="fas fa-home"></i> ড্যাশবোর্ড</a>
-        <a href="ledger.html"><i class="fas fa-coins"></i> আয়-ব্যয় ইনপুট</a>
-        <a href="debt.html"><i class="fas fa-handshake"></i> দেনা-পাওনা</a>
-        <a href="accounts.html" class="active"><i class="fas fa-key"></i> একাউন্টস</a>
-        <a href="reports.html"><i class="fas fa-file-alt"></i> রিপোর্ট</a>
-    </div>
-
-    <div class="main-content">
-        <div class="box">
-            <h3><i class="fas fa-shield-alt"></i> একাউন্ট ভল্ট (Secure Cloud)</h3>
-            <p style="color:#94a3b8; margin-bottom: 20px;">আপনার বিভিন্ন একাউন্টের পাসওয়ার্ড নিরাপদে ক্লাউডে রাখুন।</p>
+        <div class="form-group">
+            <label>একাউন্টের নাম:</label>
+            <input type="text" id="accName" placeholder="যেমন: নগদ টাকা, সোনালী ব্যাংক, বিকাশ">
             
-            <div class="form-group">
-                <label>ক্যাটাগরি (যেমন: Gmail, Facebook, Bank):</label>
-                <input type="text" id="a-cat" placeholder="ক্যাটাগরি লিখুন">
-            </div>
-
-            <div class="form-group">
-                <label>টাইটেল/নাম:</label>
-                <input type="text" id="a-title" placeholder="যেমন: My Primary Gmail">
-            </div>
-
-            <div class="form-group">
-                <label>ইউজারনেম/ইমেইল:</label>
-                <input type="text" id="a-user" placeholder="example@mail.com">
-            </div>
-
-            <div class="form-group">
-                <label>পাসওয়ার্ড:</label>
-                <input type="password" id="a-pass" placeholder="পাসওয়ার্ড লিখুন">
-            </div>
-
-            <button onclick="saveAccountToCloud()"><i class="fas fa-lock"></i> একাউন্ট সেভ করুন</button>
+            <label>বর্তমান ব্যালেন্স (৳):</label>
+            <input type="number" id="accBalance" placeholder="0.00">
+            
+            <button onclick="saveAccount()" id="accBtn">একাউন্ট যোগ করুন</button>
         </div>
+
+        <hr>
+        <h3>আপনার একাউন্ট সমূহ</h3>
+        <div id="accountList">লোডিং...</div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getDatabase, ref, push, set } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+        import { getDatabase, ref, push, set, onValue, remove } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
 
-        // --- আপনার Firebase Config এখানে বসান ---
+        // আপনার সঠিক Firebase Config
         const firebaseConfig = {
-            apiKey: "YOUR_API_KEY",
-            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-            databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
-            projectId: "YOUR_PROJECT_ID",
-            storageBucket: "YOUR_PROJECT_ID.appspot.com",
-            messagingSenderId: "YOUR_SENDER_ID",
-            appId: "YOUR_APP_ID"
+            apiKey: "AIzaSyB-6yH2CTfA4bBny99kOElCypisOAJqbeo",
+            authDomain: "rj-vault-14646.firebaseapp.com",
+            databaseURL: "https://rj-vault-14646-default-rtdb.firebaseio.com",
+            projectId: "rj-vault-14646",
+            storageBucket: "rj-vault-14646.firebasestorage.app",
+            messagingSenderId: "512342363505",
+            appId: "1:512342363505:web:db70675bf68e6197197ad0"
         };
 
         const app = initializeApp(firebaseConfig);
         const db = getDatabase(app);
 
-        window.saveAccountToCloud = function() {
-            const cat = document.getElementById('a-cat').value;
-            const title = document.getElementById('a-title').value;
-            const user = document.getElementById('a-user').value;
-            const pass = document.getElementById('a-pass').value;
+        // একাউন্ট সেভ করা
+        window.saveAccount = function() {
+            const name = document.getElementById('accName').value;
+            const bal = parseFloat(document.getElementById('accBalance').value);
+            const btn = document.getElementById('accBtn');
 
-            if (!title || !user || !pass) {
-                alert("দয়া করে প্রয়োজনীয় ঘরগুলো পূরণ করুন।");
-                return;
-            }
-
-            const accData = {
-                cat: cat || "General",
-                title: title,
-                user: user,
-                pass: pass,
-                timestamp: Date.now()
-            };
-
-            const accRef = ref(db, 'accounts');
-            const newAccRef = push(accRef);
-            
-            set(newAccRef, accData)
+            if(name && !isNaN(bal)) {
+                btn.disabled = true;
+                const accRef = ref(db, 'accounts_data');
+                const newAccRef = push(accRef);
+                
+                set(newAccRef, {
+                    name: name,
+                    balance: bal,
+                    lastUpdate: new Date().toLocaleString('bn-BD')
+                })
                 .then(() => {
-                    document.getElementById('a-cat').value = "";
-                    document.getElementById('a-title').value = "";
-                    document.getElementById('a-user').value = "";
-                    document.getElementById('a-pass').value = "";
-                    alert("✅ একাউন্ট তথ্য ক্লাউড ভল্টে সেভ হয়েছে!");
+                    alert("একাউন্ট যুক্ত হয়েছে!");
+                    document.getElementById('accName').value = '';
+                    document.getElementById('accBalance').value = '';
+                    btn.disabled = false;
                 })
                 .catch((e) => alert("Error: " + e.message));
+            } else {
+                alert("সঠিক তথ্য দিন।");
+            }
+        }
+
+        // একাউন্ট লিস্ট দেখানো
+        const accListRef = ref(db, 'accounts_data');
+        onValue(accListRef, (snapshot) => {
+            const data = snapshot.val();
+            const display = document.getElementById('accountList');
+            display.innerHTML = '';
+            
+            if (data) {
+                Object.keys(data).forEach(key => {
+                    const item = data[key];
+                    display.innerHTML += `
+                        <div style="border: 1px solid #ddd; padding: 15px; margin-bottom: 10px; border-radius: 8px; background: #f9f9f9; position: relative;">
+                            <strong style="font-size: 1.1em;">${item.name}</strong> <br>
+                            <span style="color: #007bff; font-weight: bold;">ব্যালেন্স: ৳${item.balance.toLocaleString()}</span> <br>
+                            <small style="color: #777;">আপডেট: ${item.lastUpdate}</small>
+                            <button onclick="deleteAccount('${key}')" style="position:absolute; right:15px; top:15px; background:none; border:none; color:red; cursor:pointer; font-size: 1.2em;">🗑️</button>
+                        </div>`;
+                });
+            } else {
+                display.innerHTML = 'কোনো একাউন্ট যুক্ত করা হয়নি।';
+            }
+        });
+
+        // ডিলিট ফাংশন
+        window.deleteAccount = function(key) {
+            if(confirm("এই একাউন্টটি কি মুছে ফেলতে চান?")) {
+                remove(ref(db, 'accounts_data/' + key));
+            }
         }
     </script>
 </body>
